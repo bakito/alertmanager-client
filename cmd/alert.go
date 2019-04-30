@@ -1,17 +1,3 @@
-// Copyright © 2019 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
@@ -30,6 +16,7 @@ var (
 	startsAt    string
 	endsAt      string
 	targetURL   string
+	token       string
 	labels      []string
 	annotations []string
 )
@@ -37,13 +24,7 @@ var (
 // alertCmd represents the alert command
 var alertCmd = &cobra.Command{
 	Use:   "alert",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Send alerts to alertmanager",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		a := new(model.Alert)
 
@@ -75,22 +56,24 @@ to quickly create a Cobra application.`,
 			return err
 		}
 
-		b, err := json.Marshal(a)
-		if err != nil {
-			return err
-		}
-
-		fmt.Printf("alert called %s\n", b)
-
 		if targetURL != "" {
-			resp, err := resty.R().
+			r := resty.R().
 				SetHeader("Content-Type", "application/json").
-				SetBody(a).
-				Post(targetURL)
+				SetBody(a)
+			if token != "" {
+				r.SetAuthToken(token)
+			}
+			resp, err := r.Post(targetURL)
 			if err != nil {
 				return err
 			}
 			fmt.Print(resp.StatusCode())
+		} else {
+			b, err := json.Marshal(a)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("alert called %s\n", b)
 		}
 		return nil
 	},
@@ -99,21 +82,15 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(alertCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
 	alertCmd.PersistentFlags().StringSliceVarP(&labels, "label", "l", make([]string, 0), "labels; url query formatted values. 'alertname' one or the labels")
 	alertCmd.PersistentFlags().StringSliceVarP(&annotations, "annotation", "a", make([]string, 0), "annotation; url query formatted values")
 	alertCmd.PersistentFlags().StringVarP(&startsAt, "startsAt", "s", "", "starts at")
 	alertCmd.PersistentFlags().StringVarP(&endsAt, "endsAt", "e", "", "ends at")
 
 	alertCmd.PersistentFlags().StringVarP(&targetURL, "targetURL", "t", "", "the target url to sent the alert to")
+	alertCmd.PersistentFlags().StringVar(&token, "token", "", "the target auth token")
 
 	cobra.MarkFlagRequired(alertCmd.PersistentFlags(), "label")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// alertCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func toLabelSet(values []string) (pm.LabelSet, error) {
