@@ -22,6 +22,7 @@ type Alert struct {
 	GeneratorURL string     `json:"generatorURL,omitempty"`
 }
 
+// Validate validate the alert
 func (a Alert) Validate() error {
 	if err := a.Labels.Validate(); err != nil {
 		return err
@@ -31,19 +32,5 @@ func (a Alert) Validate() error {
 		return fmt.Errorf("'alertname' label must be set")
 	}
 
-	if err := a.Annotations.Validate(); err != nil {
-		return err
-	}
-
-	return nil
-
-	for ln, lv := range a.Labels {
-		if !ln.IsValid() {
-			return fmt.Errorf("invalid name %q", ln)
-		}
-		if !lv.IsValid() {
-			return fmt.Errorf("invalid value %q", lv)
-		}
-	}
-	return nil
+	return a.Annotations.Validate()
 }
