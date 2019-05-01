@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"path"
 	"time"
 
 	"github.com/bakito/alertmanager-client/pkg/model"
@@ -16,6 +17,7 @@ var (
 	startsAt    string
 	endsAt      string
 	targetURL   string
+	apiPath     string
 	token       string
 	labels      []string
 	annotations []string
@@ -63,7 +65,14 @@ var alertCmd = &cobra.Command{
 			if token != "" {
 				r.SetAuthToken(token)
 			}
-			resp, err := r.Post(targetURL)
+			u, err := url.Parse(targetURL)
+			if err != nil {
+				return err
+			}
+
+			u.Path = path.Join(u.Path, apiPath)
+			resp, err := r.Post(u.String())
+
 			if err != nil {
 				return err
 			}
@@ -88,6 +97,8 @@ func init() {
 	alertCmd.PersistentFlags().StringVarP(&endsAt, "endsAt", "e", "", "ends at")
 
 	alertCmd.PersistentFlags().StringVarP(&targetURL, "targetURL", "t", "", "the target url to sent the alert to")
+	alertCmd.PersistentFlags().StringVar(&apiPath, "apiPath", "/api/v1/alerts", "alerts api path")
+
 	alertCmd.PersistentFlags().StringVar(&token, "token", "", "the target auth token")
 
 	cobra.MarkFlagRequired(alertCmd.PersistentFlags(), "label")
